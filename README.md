@@ -1,5 +1,11 @@
 # FinOps Data Agent
 
+[![CI](https://github.com/niks1503/finops-data-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/niks1503/finops-data-agent/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)
+![dbt](https://img.shields.io/badge/dbt-duckdb-orange)
+![Gemini](https://img.shields.io/badge/LLM-Gemini%20function%20calling-8E75B2)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 An AI agent that answers questions about multi-cloud cost data in plain English, such as
 *"Which account and service had the biggest cost jump in September?"*, by writing SQL, running it
 read-only, fixing its own errors, and answering **only from the query results**. An evaluation
@@ -7,6 +13,21 @@ harness measures how often it is right.
 
 Built with **Python, SQL, dbt, DuckDB, Google Gemini (function calling), FastAPI, Streamlit, Docker
 and GitHub Actions**.
+
+![Streamlit UI answering a question about monthly Vertex AI spend, with chart and result table](docs/ui-demo.png)
+
+## Results at a glance
+
+| | |
+|---|---|
+| **Execution accuracy** (query result contains the gold answer) | **97%** (32/33) |
+| **Answer accuracy** (final sentence states the gold value) | **100%** (33/33) |
+| **Unsafe requests refused** (delete, drop, off-topic) | 3/3 |
+| **Planted cost anomalies found** | 3/3 |
+| **Tests** | 66 unit/integration tests + 15 dbt data tests, run in CI on every push |
+| **Cost per question** | $0 on the Gemini free tier (~3.5k tokens) |
+
+Details, failure analysis and run-to-run comparison are in [Evaluation](#evaluation).
 
 ## Why this project
 
@@ -64,6 +85,7 @@ FinOps Foundation's anonymized sample data instead.
 ```bash
 make setup                 # virtualenv + dependencies
 make build                 # generate data, build dbt models, run data tests
+make lint                  # ruff
 make test                  # unit + integration tests (no API key needed)
 make validate              # verify every gold answer in the benchmark
 
@@ -74,6 +96,33 @@ make evals                 # run the agent on the benchmark -> evals/results/rep
 ```
 
 CLI: `.venv/bin/python -m finops_agent.cli "Which team spent the most in 2026?"`
+
+Shareable UI links: `http://localhost:8501/?q=Which+account+spent+the+most+last+month%3F` opens the UI and runs the question.
+
+API example:
+
+```bash
+curl -s localhost:8000/ask -H 'content-type: application/json' \
+  -d '{"question": "Which account spent the most last month?"}' | jq .answer
+```
+
+### Run with Docker
+
+The image generates the data and builds the dbt warehouse at build time, so it starts ready to answer.
+The API key is passed at run time and is never copied into the image (see `.dockerignore`).
+
+```bash
+docker build -t finops-agent .
+docker run --rm -p 8501:8501 --env-file .env finops-agent                      # Streamlit UI
+docker run --rm -p 8000:8000 --env-file .env finops-agent \
+  uvicorn api.main:app --host 0.0.0.0 --port 8000                              # REST API
+```
+
+### CI
+
+GitHub Actions runs on every push: **lint** (ruff), **tests** on Python 3.12 and 3.13 (data generation,
+dbt build with data tests, pytest, gold-answer validation), a **Docker build with an API smoke test**,
+and the **live agent benchmark** when a `GEMINI_API_KEY` repository secret is set.
 
 ## Evaluation
 
@@ -146,4 +195,9 @@ evals/                      benchmark.yaml, comparators, eval runner and reports
 api/main.py                 FastAPI service
 app/streamlit_app.py        Streamlit UI
 tests/                      66 tests: guard, tools, agent loop (scripted LLM), model fallback, gold answers
+docs/                       screenshots
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).

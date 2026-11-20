@@ -37,7 +37,7 @@ class SchemaIndex:
         self._matrix = self._vectorizer.fit_transform([d.render() for d in docs])
 
     @classmethod
-    def from_manifest(cls, con: duckdb.DuckDBPyConnection, manifest_path: Path | None = None) -> "SchemaIndex":
+    def from_manifest(cls, con: duckdb.DuckDBPyConnection, manifest_path: Path | None = None) -> SchemaIndex:
         manifest = json.loads(Path(manifest_path or settings.manifest_path).read_text())
         types = {
             (t, c): dt

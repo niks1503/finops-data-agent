@@ -4,14 +4,30 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
           cache: pip
       - run: pip install -r requirements.txt
       - name: Generate data and build warehouse (dbt models + data tests)
@@ -23,6 +39,19 @@ jobs:
       - name: Validate benchmark gold answers
         run: python evals/run_evals.py --validate-gold
 
+  docker:
+    # Builds the image (data + dbt run inside the build) and checks the API starts.
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -t finops-agent .
+      - name: Smoke test the API container
+        run: |
+          docker run -d --name api -p 8000:8000 finops-agent uvicorn api.main:app --host 0.0.0.0 --port 8000
+          for i in $(seq 1 30); do curl -fs localhost:8000/health && exit 0; sleep 2; done
+          docker logs api; exit 1
+
   evals:
     # Runs the agent on the benchmark when a GEMINI_API_KEY repository secret is configured.
     needs: test
@@ -31,8 +60,8 @@ jobs:
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -43,7 +72,7 @@ jobs:
       - name: Run agent evaluation
         if: env.GEMINI_API_KEY != ''
         run: python evals/run_evals.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: env.GEMINI_API_KEY != ''
         with:
           name: eval-report

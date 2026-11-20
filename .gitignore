@@ -10,3 +10,4 @@ data/raw/
 logs/
 .DS_Store
 dbt/.user.yml
+.ruff_cache/

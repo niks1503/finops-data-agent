@@ -45,7 +45,7 @@ class GeminiClient:
         self.model = model
         self.models = [model] + [m for m in (fallbacks or []) if m and m != model]
 
-    def new_session(self, system: str, tools: list[dict[str, Any]]) -> "GeminiSession":
+    def new_session(self, system: str, tools: list[dict[str, Any]]) -> GeminiSession:
         return GeminiSession(self._client, self.models, system, tools)
 
 
@@ -133,7 +133,7 @@ class ScriptedLLM:
         self._turns = list(turns)
         self.received: list[Any] = []
 
-    def new_session(self, system: str, tools: list[dict[str, Any]]) -> "ScriptedLLM":
+    def new_session(self, system: str, tools: list[dict[str, Any]]) -> ScriptedLLM:
         self.received.append(("system", system))
         return self
 

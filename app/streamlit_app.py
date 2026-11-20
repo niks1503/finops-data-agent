@@ -35,12 +35,17 @@ except RuntimeError as exc:
     st.stop()
 
 cols = st.columns(len(EXAMPLES))
-for col, ex in zip(cols, EXAMPLES):
+for col, ex in zip(cols, EXAMPLES, strict=True):
     if col.button(ex, use_container_width=True):
         st.session_state["q"] = ex
 
+# Shareable links: ?q=<question> pre-fills and runs a question.
+if "q" not in st.session_state and st.query_params.get("q"):
+    st.session_state["q"] = st.query_params["q"]
+
 question = st.text_input("Your question", key="q", placeholder="Why did storage spend jump in September?")
 if question:
+    st.query_params["q"] = question
     with st.spinner("Thinking, querying, checking..."):
         r = agent.ask(question)
     st.markdown(f"### {r.answer}")

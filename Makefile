@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 DBT := ../.venv/bin/dbt
 
-.PHONY: setup data dbt build test validate evals api ui docker clean
+.PHONY: setup data dbt build lint test validate evals api ui docker clean
 
 setup:            ## create virtualenv and install dependencies
 	python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
@@ -13,6 +13,9 @@ dbt:              ## build models and run data tests
 	cd dbt && $(DBT) build --profiles-dir .
 
 build: data dbt   ## data + warehouse
+
+lint:             ## ruff lint
+	.venv/bin/ruff check .
 
 test:             ## unit + integration tests (no API key needed)
 	$(PY) -m pytest -q

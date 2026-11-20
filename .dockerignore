@@ -1,0 +1,15 @@
+# Never bake secrets or local build output into the image.
+.env
+.env.*
+!.env.example
+.venv/
+.git/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+warehouse/*.duckdb*
+data/raw/
+dbt/target/
+dbt/logs/
+docs/

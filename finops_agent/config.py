@@ -19,7 +19,11 @@ class Settings:
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     # Tried in order if the main model is overloaded (503), timing out or rate limited.
     gemini_fallbacks: tuple[str, ...] = tuple(
-        m.strip() for m in os.getenv("GEMINI_FALLBACK_MODELS", "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite").split(",") if m.strip()
+        m.strip()
+        for m in os.getenv(
+            "GEMINI_FALLBACK_MODELS", "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite"
+        ).split(",")
+        if m.strip()
     )
     gemini_timeout_s: float = float(os.getenv("GEMINI_TIMEOUT_S", "60"))
     max_steps: int = int(os.getenv("AGENT_MAX_STEPS", "8"))

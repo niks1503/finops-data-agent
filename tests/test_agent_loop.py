@@ -10,10 +10,14 @@ GOOD_SQL = (
 
 def test_agent_self_corrects_after_sql_error():
     llm = ScriptedLLM([
-        LLMTurn(tool_calls=[ToolCall("search_schema", {"query": "cost by account"})], input_tokens=100, output_tokens=10),
+        LLMTurn(
+            tool_calls=[ToolCall("search_schema", {"query": "cost by account"})], input_tokens=100, output_tokens=10
+        ),
         LLMTurn(tool_calls=[ToolCall("run_sql", {"sql": "select account_name from dim_account"})]),
         LLMTurn(tool_calls=[ToolCall("run_sql", {"sql": GOOD_SQL})]),
-        LLMTurn(text="payments-prod spent the most in October 2026 (28,543.22 USD).", input_tokens=50, output_tokens=20),
+        LLMTurn(
+            text="payments-prod spent the most in October 2026 (28,543.22 USD).", input_tokens=50, output_tokens=20
+        ),
     ])
     r = FinOpsAgent(llm=llm).ask("Which account spent the most last month?")
 
@@ -48,4 +52,5 @@ def test_agent_asks_again_when_final_reply_is_empty():
     ])
     r = FinOpsAgent(llm=llm).ask("How many accounts?")
     assert r.answer == "There are 8 accounts."
-    assert ("user", "Please state the answer to my question in 1-3 sentences, using only the query results.") in llm.received
+    nudge = "Please state the answer to my question in 1-3 sentences, using only the query results."
+    assert ("user", nudge) in llm.received

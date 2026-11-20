@@ -14,7 +14,8 @@ class FakeModels:
     def generate_content(self, model, contents, config):
         self.calls.append(model)
         if model in self.failing:
-            raise errors.ServerError(self.code, {"error": {"code": self.code, "message": "overloaded", "status": "UNAVAILABLE"}})
+            body = {"error": {"code": self.code, "message": "overloaded", "status": "UNAVAILABLE"}}
+            raise errors.ServerError(self.code, body)
         part = SimpleNamespace(function_call=None, text="ok", thought=False)
         return SimpleNamespace(
             usage_metadata=SimpleNamespace(prompt_token_count=5, candidates_token_count=1),

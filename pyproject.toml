@@ -1,0 +1,17 @@
+[project]
+name = "finops-data-agent"
+version = "0.1.0"
+description = "AI agent that answers cloud-cost questions with guarded, self-correcting SQL over dbt + DuckDB"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [".venv", "dbt/target"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
