@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw cloud billing export in FOCUS (FinOps Open Cost and Usage Specification) format.
+    tables:
+      - name: focus_billing
+        description: One row per charge. Daily usage rows plus monthly Tax and Credit rows.
+        meta:
+          external_location: "read_csv_auto('{{ env_var('FOCUS_CSV', '../data/raw/focus_billing.csv') }}', header=true)"

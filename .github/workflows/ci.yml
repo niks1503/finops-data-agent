@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Generate data and build warehouse (dbt models + data tests)
+        run: |
+          python data/generate_focus.py --out data/raw/focus_billing.csv
+          cd dbt && dbt build --profiles-dir .
+      - name: Unit and integration tests
+        run: python -m pytest -q
+      - name: Validate benchmark gold answers
+        run: python evals/run_evals.py --validate-gold
+
+  evals:
+    # Runs the agent on the benchmark when a GEMINI_API_KEY repository secret is configured.
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: |
+          python data/generate_focus.py --out data/raw/focus_billing.csv
+          cd dbt && dbt build --profiles-dir .
+      - name: Run agent evaluation
+        if: env.GEMINI_API_KEY != ''
+        run: python evals/run_evals.py
+      - uses: actions/upload-artifact@v4
+        if: env.GEMINI_API_KEY != ''
+        with:
+          name: eval-report
+          path: evals/results/

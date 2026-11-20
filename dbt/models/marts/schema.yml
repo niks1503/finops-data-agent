@@ -1,0 +1,108 @@
+version: 2
+
+models:
+  - name: dim_account
+    description: >
+      Cloud sub-accounts (one per team workspace), e.g. payments-prod, data-platform, ml-research.
+      Use to look up account names, owning team, environment (prod/dev) and cloud provider.
+    columns:
+      - name: sub_account_id
+        description: Unique account id like 'acc-003'. Join key to fct_daily_cost and mart_monthly_cost.
+        data_tests: [unique, not_null]
+      - name: sub_account_name
+        description: Human-readable account name, e.g. 'data-platform', 'payments-prod'.
+        data_tests: [unique, not_null]
+      - name: team
+        description: Owning team, e.g. Payments, Data, ML, Web, Mobile, Security.
+      - name: environment
+        description: prod or dev.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["prod", "dev"]
+      - name: provider_name
+        description: Cloud provider - AWS, Google Cloud or Microsoft (Azure).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["AWS", "Google Cloud", "Microsoft"]
+
+  - name: dim_service
+    description: Cloud services with their category (Compute, Storage, Databases, Networking, Analytics, AI and Machine Learning).
+    columns:
+      - name: service_name
+        description: Service name, e.g. 'Amazon EBS Snapshots', 'Vertex AI', 'BigQuery', 'Virtual Machines'.
+        data_tests: [unique, not_null]
+      - name: service_category
+        description: FOCUS service category such as Compute, Storage, Databases, Networking, Analytics, 'AI and Machine Learning'.
+
+  - name: fct_daily_cost
+    description: >
+      Daily cloud cost fact table. Grain is charge_date x sub_account_id x service_name x region_id x charge_category.
+      Use for daily trends, date-range totals, region breakdowns and anomaly spikes.
+      Spend questions should use effective_cost. Usage rows have charge_category = 'Usage';
+      monthly 'Tax' and 'Credit' (negative) rows are also included.
+    columns:
+      - name: charge_date
+        description: Day the cost was incurred (DATE). Tax and Credit rows use the first day of the month.
+        data_tests: [not_null]
+      - name: billing_month
+        description: First day of the billing month (DATE), e.g. 2026-09-01.
+        data_tests: [not_null]
+      - name: sub_account_id
+        description: Account id; join to dim_account for the account name and team.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_account')
+                field: sub_account_id
+      - name: service_name
+        description: Cloud service name. For Tax rows this is 'Tax'.
+      - name: service_category
+        description: Service category (Compute, Storage, Databases, Networking, Analytics, 'AI and Machine Learning', Other).
+      - name: region_id
+        description: Cloud region code such as us-east-1, eu-west-1, asia-south1, centralindia.
+      - name: charge_category
+        description: Usage, Tax or Credit.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Usage", "Tax", "Credit"]
+      - name: consumed_quantity
+        description: Amount consumed in consumed_unit (null for Tax and Credit).
+      - name: consumed_unit
+        description: Unit of consumption, e.g. Hours, GB-Mo, GB, TiB.
+      - name: list_cost
+        description: Cost at list price before discounts, in USD.
+      - name: billed_cost
+        description: Amount invoiced, in USD.
+      - name: effective_cost
+        description: Amortized cost after discounts and credits, in USD. Default measure for 'spend' or 'cost' questions.
+
+  - name: mart_monthly_cost
+    description: >
+      Monthly effective cost per sub-account and service with month-over-month change.
+      Best table for monthly totals, 'which account/service grew', and month-over-month questions.
+    columns:
+      - name: billing_month
+        description: First day of the month (DATE).
+        data_tests: [not_null]
+      - name: sub_account_id
+        description: Account id.
+      - name: sub_account_name
+        description: Account name, e.g. data-platform.
+      - name: team
+        description: Owning team.
+      - name: service_name
+        description: Cloud service name.
+      - name: service_category
+        description: Service category.
+      - name: effective_cost
+        description: Total effective cost for the month in USD.
+      - name: prev_month_cost
+        description: Effective cost in the previous month for the same account and service.
+      - name: mom_change
+        description: Month-over-month change in USD (effective_cost - prev_month_cost).
+      - name: mom_change_pct
+        description: Month-over-month change in percent.

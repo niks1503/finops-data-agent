@@ -1,0 +1,7 @@
+finops:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('FINOPS_DB', '../warehouse/finops.duckdb') }}"
+      threads: 4
